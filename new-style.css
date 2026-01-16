@@ -1,0 +1,1733 @@
+/* =======================================================
+   === new-style.css - 热量模块 V5.1 (UI 优化版) ===
+   ======================================================= */
+
+/* 1. 彻底隐藏日记顶部栏 (最高权重) */
+body.calorie-page-active #top-bar,
+body.calorie-page-active .top-bar {
+    display: none !important;
+    height: 0 !important;
+    padding: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+}
+
+/* 1. 修复热量页容器：取消强制100vh，改用视口高度减安全区，避免遮挡 */
+#calorie-page {
+    background-color: var(--cal-bg);
+    padding: 0;
+    height: 100dvh; /* 改用动态视口高度，适配刘海屏/底部栏 */
+    width: 100vw;
+    display: none;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+    overflow: hidden;
+    box-sizing: border-box; /* 防止内边距撑大容器 */
+}
+#calorie-page.active { display: flex; }
+
+/* 2. 修复内容滚动区：精准计算底部留白，适配Dock+安全区 */
+#calorie-content-area {
+    flex: 1;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0 20px;
+    padding-top: max(20px, env(safe-area-inset-top));
+    /* 底部留白 = Dock高度(60px) + 安全区 + 额外间距(20px) */
+    padding-bottom: calc(env(safe-area-inset-bottom) + 80px) !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+
+/* === UI 变量 === */
+:root {
+    --cal-bg: #f9f9f9; /* 极简白灰背景 */
+    --cal-card: #ffffff;
+    --cal-text: #333333;
+    --cal-sub: #999999;
+    --cal-accent: #8eadd1; /* 莫兰迪蓝 */
+    --cal-accent-dec: #e0a0a0; /* 消耗/减肥色 */
+}
+.dark-mode {
+    --cal-bg: #000000;
+    --cal-card: #1c1c1e;
+    --cal-text: #ffffff;
+    --cal-sub: #8e8e93;
+    --cal-accent: #5a8bc9;
+    --cal-accent-dec: #d66b6b;
+}
+
+/* === 顶部导航 === */
+.cal-top-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    height: 44px;
+    width: 100%;
+    flex-shrink: 0; /* 防止被挤压 */
+}
+.cal-back-btn {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: transparent; /* 透明背景 */
+    color: var(--cal-text);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 20px;
+}
+
+/* === 仿图 UI：个人信息区 === */
+.cal-profile-header-ref {
+    position: relative;
+    margin-top: 10px;
+    margin-bottom: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* 头像 (左侧) */
+.cal-ref-avatar {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--cal-card);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    z-index: 2; /* 在渐变条之上 */
+    position: relative;
+}
+
+/* 渐变昵称条 (核心样式) */
+.cal-ref-name-bar {
+    position: absolute;
+    left: 40px; /* 插入头像一半的位置 */
+    right: 0;
+    height: 40px;
+    /* 从左(透明) 到 右(灰色/深色) 的渐变 */
+    background: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.08) 100%);
+    border-radius: 0 20px 20px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* 两端对齐 */
+    padding-left: 50px; /* 让出头像位置 */
+    padding-right: 20px;
+    z-index: 1;
+}
+.dark-mode .cal-ref-name-bar {
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.15) 100%);
+}
+
+.cal-ref-name-text {
+    font-size: 18px;
+    font-weight: 300;
+    letter-spacing: 2px;
+    color: var(--cal-text);
+}
+
+.cal-ref-edit-tag {
+    font-size: 10px;
+    background: var(--cal-text);
+    color: var(--cal-bg);
+    padding: 2px 8px;
+    border-radius: 10px;
+    opacity: 0.8;
+}
+
+/* === 信息数据三列 (About Me) === */
+.cal-info-cols {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    padding: 0 10px;
+}
+.cal-info-item { text-align: center; flex: 1; }
+.cal-info-label { font-size: 10px; color: var(--cal-sub); letter-spacing: 1px; margin-bottom: 5px; text-transform: uppercase; }
+.cal-info-val { font-size: 16px; color: var(--cal-text); font-weight: 500; }
+
+/* === 进度条区域 (包含剩余热量) === */
+.cal-progress-section {
+    margin-bottom: 40px;
+}
+.cal-progress-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+.cal-prog-label { font-size: 12px; color: var(--cal-sub); }
+.cal-prog-val { font-size: 14px; font-weight: bold; color: var(--cal-text); }
+
+/* 进度条轨道 */
+.cal-progress-track {
+    height: 4px;
+    width: 100%;
+    background: rgba(0,0,0,0.05);
+    border-radius: 2px;
+    margin-bottom: 20px; /* 两个进度条之间的间距 */
+    position: relative;
+    overflow: hidden;
+}
+.dark-mode .cal-progress-track { background: rgba(255,255,255,0.1); }
+
+/* 进度条填充 (渐变) */
+.cal-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--cal-accent) 0%, rgba(255,255,255,0) 100%); /* 你的需求：从有色到透明 */
+    border-radius: 2px;
+    position: absolute;
+    left: 0; top: 0;
+    transition: width 0.5s ease;
+}
+/* 反向渐变 (用于减肥模式或消耗) */
+.cal-progress-fill.reverse {
+    background: linear-gradient(90deg, var(--cal-accent-dec) 0%, rgba(255,255,255,0) 100%);
+}
+
+/* === 相册小组件 (优化分散) === */
+.cal-photo-widget-container {
+    position: relative;
+    height: 160px; /* 加高一点防止遮挡 */
+    margin: 20px 0 40px 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.cal-polaroid-v2 {
+    position: absolute;
+    width: 100px; height: 125px; /* 稍微加大相纸 */
+    background: #fff;
+    padding: 6px 6px 25px 6px; /* 底部留白像拍立得 */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    cursor: pointer;
+    transform-origin: center center;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+.cal-polaroid-v2 img {
+    width: 100%; height: 100%; object-fit: cover; background: #eee;
+}
+/* 选中置顶效果 */
+.cal-polaroid-v2.is-top {
+    z-index: 100 !important;
+    transform: scale(1.1) translateY(-10px) !important;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+}
+
+
+/* === 修复：底部 Dock (最终稳健版) === */
+/* === 修复：底部 Dock (抬高防遮挡 + 保持偏左) === */
+.cal-bottom-dock {
+    position: fixed;
+    /* 关键：加大底部距离，适配 Safari 工具栏和黑条 */
+    bottom: max(40px, env(safe-area-inset-bottom)); 
+    left: 50%;
+    /* 听你的：保持 -60% 向左偏移，给右边加号留位置 */
+    transform: translateX(-60%) !important; 
+    
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 40px;
+    
+    /* 宽度与内边距 */
+    width: auto;
+    min-width: 260px;
+    height: 60px;
+    padding: 0 25px;
+    
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    border: 1px solid rgba(0,0,0,0.05);
+    z-index: 99990; /* 略低于加号 */
+}
+
+/* 黑夜模式适配 */
+.dark-mode .cal-bottom-dock {
+    background: rgba(30, 30, 30, 0.95);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* 图标颜色 */
+/* === 修复：图标容器 (锁死位置) === */
+.cal-dock-item {
+    position: relative; /* 作为SVG的定位基准 */
+    overflow: hidden; /* 防止SVG超出容器 */
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--cal-sub);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border-radius: 50%;
+}
+
+/* 选中状态 */
+.cal-dock-item.active {
+    color: var(--cal-text);
+    transform: translateY(-3px) scale(0.9); /* 选中时稍微上浮变大 */
+    background: rgba(0,0,0,0.03); /* 淡淡的背景提示 */
+}
+.dark-mode .cal-dock-item.active {
+    background: rgba(255,255,255,0.1);
+}
+
+/* 强制 SVG 尺寸和行为 */
+.cal-dock-item svg {
+    width: 24px;
+    height: 24px;
+    display: block;
+    pointer-events: none;
+    position: relative; /* 固定SVG位置 */
+    top: 0;
+    left: 0;
+    transform: none !important; /* 取消任何意外的变形 */
+}
+
+/* 6. 修复统计页/主页的容器溢出，统一约束所有模块 */
+.cal-timeline-container, .cal-items-list, .cal-detail-list-container {
+    position: relative;
+    overflow: hidden; /* 防止内部元素溢出导致SVG错位 */
+    padding-bottom: calc(env(safe-area-inset-bottom) + 80px) !important;
+}
+
+/* === 修复：悬浮加号 (位置跟随抬高) === */
+.cal-fab-white {
+    position: fixed;
+    /* 这里的 bottom 要比 Dock 稍微高一点点或者持平 */
+    bottom: max(45px, env(safe-area-inset-bottom));
+    right: 20px; /* 靠右固定 */
+    
+    width: 50px; height: 50px;
+    background: var(--cal-card);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--cal-text);
+    
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+    cursor: pointer;
+    /* 关键：层级要比 Dock 高，否则可能点不动 */
+    z-index: 100000; 
+}
+
+/* === 自己的模态框样式 === */
+.cal-modal-overlay {
+    position: fixed; top:0; left:0; width:100%; height:100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 20000;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(5px);
+}
+.cal-modal-card {
+    background: var(--cal-card);
+    width: 85%; max-width: 340px;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    color: var(--cal-text);
+    max-height: 80vh;
+    overflow-y: auto;
+}
+.cal-input {
+    width: 100%; padding: 10px;
+    background: var(--cal-bg);
+    border: 1px solid transparent; border-radius: 10px;
+    margin-bottom: 10px;
+    color: var(--cal-text);
+    font-size: 14px;
+}
+.cal-input:focus { border-color: var(--cal-accent); outline: none; }
+.cal-btn {
+    width: 100%; padding: 12px;
+    background: var(--cal-text);
+    color: var(--cal-bg);
+    border: none; border-radius: 10px;
+    font-weight: bold; cursor: pointer;
+    margin-top: 10px;
+}
+.cal-label-sm { font-size: 12px; color: var(--cal-sub); margin-bottom: 4px; display: block;}
+
+
+/* === 近期记录列表项 (优化版) === */
+.cal-record-item {
+    background: var(--cal-card);
+    border-radius: 20px; /* 更大的圆角 */
+    padding: 15px 20px;
+    display: flex; 
+    align-items: center;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03); /* 轻微浮起 */
+    border: 1px solid rgba(0,0,0,0.02);
+    transition: transform 0.2s;
+}
+.cal-record-item:active { transform: scale(0.98); }
+
+/* 左侧图标容器 */
+.cal-rec-icon {
+    width: 44px; height: 44px;
+    border-radius: 14px;
+    background: var(--cal-bg);
+    display: flex; align-items: center; justify-content: center;
+    margin-right: 15px;
+    color: var(--cal-text);
+    font-size: 20px;
+}
+/* 针对不同类型的图标颜色微调 */
+.type-inc .cal-rec-icon { color: var(--cal-accent); background: rgba(142,173,209,0.1); }
+.type-dec .cal-rec-icon { color: var(--cal-accent-dec); background: rgba(224,160,160,0.1); }
+
+/* 中间文字 */
+.cal-rec-info { flex: 1; display: flex; flex-direction: column; }
+.cal-rec-name { font-weight: bold; font-size: 16px; color: var(--cal-text); margin-bottom: 4px; }
+.cal-rec-time { font-size: 12px; color: var(--cal-sub); }
+
+/* 右侧数值 */
+.cal-rec-val { font-weight: 900; font-size: 18px; letter-spacing: -0.5px; }
+
+/* =======================================================
+   === V5.2 新增：词条管理与四模块适配 ===
+   ======================================================= */
+
+/* 1. 底部 Dock 适配 4 个图标 */
+.cal-bottom-dock {
+    /* 保持原有定位，仅调整宽度和内边距适配4个图标 */
+    padding: 12px 25px; 
+    gap: 30px; /* 稍微减小间距 */
+    width: auto;
+    min-width: 280px;
+    justify-content: space-between;
+}
+
+/* 2. 词条管理页 - 顶部 Tab 栏 */
+.cal-manage-tabs {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding-bottom: 10px;
+}
+.cal-manage-tab-item {
+    margin-right: 20px;
+    font-size: 14px;
+    color: var(--cal-sub);
+    cursor: pointer;
+    position: relative;
+    padding-bottom: 5px;
+    transition: all 0.3s;
+}
+.cal-manage-tab-item.active {
+    color: var(--cal-text);
+    font-weight: bold;
+}
+/* 选中时的下划线 */
+.cal-manage-tab-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: -11px; /* 贴合边框线 */
+    left: 0; right: 0;
+    height: 3px;
+    background-color: var(--cal-accent);
+    border-radius: 2px;
+}
+
+/* === 修复：词条列表布局 === */
+.cal-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-bottom: 120px !important; /* 列表底部也留白 */
+    width: 100%; /* 确保容器占满 */
+}
+
+/* 列表项 */
+.cal-list-item {
+    background: var(--cal-card);
+    border-radius: 16px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    position: relative;
+    transition: transform 0.2s;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.01);
+    border: 1px solid rgba(0,0,0,0.02);
+    width: 100%; /* 确保卡片占满 */
+    box-sizing: border-box; /* 防止 padding 撑出 */
+}
+.cal-list-item:active { transform: scale(0.98); }
+
+/* 左侧图标占位 */
+.cal-item-icon-box {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background-color: var(--cal-bg);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--cal-sub);
+    margin-right: 15px;
+    flex-shrink: 0;
+}
+.cal-item-icon-box.type-inc { color: var(--cal-accent); background-color: rgba(142, 173, 209, 0.1); }
+.cal-item-icon-box.type-dec { color: var(--cal-accent-dec); background-color: rgba(224, 160, 160, 0.1); }
+
+/* 中间信息区 (关键：占据剩余空间) */
+.cal-item-info {
+    flex: 1; /* 自动撑开中间部分 */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden; /* 防止文字过长溢出 */
+    padding: 0 10px; /* 给左右留点空隙 */
+}
+.cal-item-name { font-size: 15px; font-weight: bold; color: var(--cal-text); margin-bottom: 4px; }
+.cal-item-sub { font-size: 12px; color: var(--cal-sub); display: flex; align-items: center; gap: 5px; }
+
+/* 胶囊标签 (代替文字描述类型) */
+.cal-tag-pill {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    background: rgba(0,0,0,0.05);
+}
+
+/* 右侧操作按钮 */
+.cal-item-action {
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--cal-sub);
+    cursor: pointer;
+}
+
+/* 5. 批量删除复选框 */
+.cal-checkbox-circle {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--cal-sub);
+    margin-right: 15px;
+    display: none; /* 默认隐藏 */
+    align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+.cal-checkbox-circle.checked {
+    border-color: var(--cal-accent);
+    background-color: var(--cal-accent);
+}
+.cal-checkbox-circle.checked::after {
+    content: ''; width: 8px; height: 4px;
+    border-left: 2px solid #fff; border-bottom: 2px solid #fff;
+    transform: rotate(-45deg) translateY(-1px);
+}
+
+/* 管理模式下显示复选框 */
+.manage-mode .cal-checkbox-circle { display: flex; }
+/* 管理模式下隐藏右侧箭头 */
+.manage-mode .cal-item-action { display: none; }
+
+/* 6. 图标选择网格 (新增/编辑弹窗用) */
+.cal-icon-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+}
+.cal-icon-option {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    background: var(--cal-bg);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: var(--cal-sub);
+    border: 2px solid transparent;
+}
+.cal-icon-option.selected {
+    border-color: var(--cal-accent);
+    color: var(--cal-accent);
+    background: rgba(142, 173, 209, 0.1);
+}
+
+/* =======================================================
+   === V5.3 新增：统计页面与时间轴 UI (仿图) ===
+   ======================================================= */
+
+/* 1. 统计页头部区域 */
+.cal-stat-header {
+    margin-bottom: 20px;
+}
+
+/* 时间维度切换 (胶囊) */
+.cal-stat-toggle-box {
+    display: flex;
+    background: rgba(0,0,0,0.05);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 20px;
+}
+.cal-stat-toggle-item {
+    flex: 1;
+    text-align: center;
+    padding: 8px 0;
+    font-size: 13px;
+    color: var(--cal-sub);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.cal-stat-toggle-item.active {
+    background: var(--cal-card);
+    color: var(--cal-text);
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* 统计数据概览卡片 */
+.cal-stat-summary-card {
+    background: var(--cal-card);
+    border-radius: 20px;
+    padding: 20px;
+    display: flex;
+    justify-content: space-around;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.02);
+    margin-bottom: 20px;
+}
+.cal-stat-sum-item { text-align: center; }
+.cal-stat-sum-label { font-size: 11px; color: var(--cal-sub); margin-bottom: 5px; }
+.cal-stat-sum-val { font-size: 18px; font-weight: bold; color: var(--cal-text); }
+.cal-stat-sum-val.net { font-size: 22px; color: var(--cal-accent); }
+
+/* 2. 时间轴列表 (核心仿图样式) */
+.cal-timeline-container {
+    padding-bottom: 100px;
+    position: relative;
+}
+
+/* 贯穿的虚线 (增强可见性适配) */
+.cal-timeline-line {
+    position: absolute;
+    left: 50px;
+    top: 10px;
+    bottom: 0;
+    width: 1px;
+    /* 使用变量，确保黑夜模式可见 */
+    border-left: 2px dashed var(--cal-sub); 
+    opacity: 0.4; /* 降低透明度，不至于太抢眼 */
+    z-index: 0;
+}
+
+/* 单个时间轴条目 */
+.cal-timeline-item {
+    display: flex;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 1;
+}
+
+/* 左侧日期/时间 */
+.cal-tl-date {
+    width: 50px;
+    text-align: center;
+    padding-top: 15px;
+    flex-shrink: 0;
+}
+.cal-tl-day-num { font-size: 18px; font-weight: bold; color: var(--cal-text); }
+.cal-tl-day-week { font-size: 10px; color: var(--cal-sub); margin-top: 2px; }
+/* 如果是同一天，隐藏重复的日期 */
+.cal-timeline-item.same-day .cal-tl-date { opacity: 0; }
+
+/* 节点圆点 (连接线上的点) */
+.cal-tl-node {
+    position: absolute;
+    left: 45px; /* 50 - 5 */
+    top: 25px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--cal-bg);
+    border: 2px solid var(--cal-accent);
+    z-index: 2;
+}
+.cal-timeline-item.type-dec .cal-tl-node { border-color: var(--cal-accent-dec); }
+
+/* 右侧卡片 */
+.cal-tl-card {
+    flex: 1;
+    background: var(--cal-card);
+    border-radius: 16px;
+    padding: 15px;
+    margin-left: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    display: flex;
+    align-items: center;
+    position: relative;
+    transition: transform 0.1s;
+}
+.cal-tl-card:active { transform: scale(0.98); }
+
+/* 批量删除模式下的复选框 */
+.cal-tl-checkbox {
+    margin-right: 10px;
+    width: 20px; height: 20px;
+    border: 2px solid var(--cal-sub);
+    border-radius: 50%;
+    display: none; /* 默认隐藏 */
+    flex-shrink: 0;
+}
+.cal-tl-checkbox.checked {
+    background: var(--cal-accent);
+    border-color: var(--cal-accent);
+}
+.batch-delete-mode .cal-tl-checkbox { display: block; }
+
+/* 卡片内部布局 */
+.cal-tl-icon {
+    width: 40px; height: 40px;
+    border-radius: 50%; /* 圆形图标背景 */
+    background: rgba(0,0,0,0.03);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--cal-text);
+    margin-right: 12px;
+    font-size: 20px;
+}
+.cal-tl-info { flex: 1; }
+.cal-tl-title { font-size: 15px; font-weight: bold; color: var(--cal-text); }
+.cal-tl-val { font-size: 18px; font-weight: 900; margin-top: 4px; }
+.cal-tl-val.inc { color: var(--cal-text); } /* 摄入黑色 */
+.cal-tl-val.dec { color: var(--cal-accent-dec); } /* 消耗红色/粉色 */
+
+.cal-tl-meta {
+    text-align: right;
+    display: flex; flex-direction: column; align-items: flex-end; justify-content: center;
+}
+.cal-tl-time { font-size: 12px; color: var(--cal-sub); margin-bottom: 4px; }
+.cal-tl-tag {
+    font-size: 10px; 
+    background: rgba(0,0,0,0.05); 
+    color: var(--cal-sub);
+    padding: 2px 6px; 
+    border-radius: 6px;
+}
+
+/* 3. 记录模式选择弹窗 (两个大块) */
+.cal-mode-select-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.cal-mode-card {
+    background: var(--cal-bg);
+    padding: 20px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+.cal-mode-card:active { transform: scale(0.98); background: rgba(0,0,0,0.05); }
+.cal-mode-icon {
+    width: 50px; height: 50px;
+    border-radius: 12px;
+    background: var(--cal-card);
+    display: flex; align-items: center; justify-content: center;
+    margin-right: 15px;
+    color: var(--cal-accent);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+.cal-mode-info h4 { margin: 0 0 5px 0; font-size: 16px; }
+.cal-mode-info p { margin: 0; font-size: 12px; color: var(--cal-sub); }
+
+
+/* =======================================================
+   === V5.4 修复：通用弹窗与心情选择样式 ===
+   ======================================================= */
+
+/* 1. 独立通用的弹窗遮罩 (修复点击无反应的核心) */
+.cal-app-modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    z-index: 99999; /* 最高层级 */
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+    animation: calFadeIn 0.2s ease-out;
+}
+@keyframes calFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* 弹窗卡片 */
+.cal-app-modal-card {
+    background: var(--cal-card);
+    width: 85%; max-width: 320px;
+    border-radius: 24px;
+    padding: 25px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+    color: var(--cal-text);
+    transform: scale(1);
+    animation: calPopIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    max-height: 85vh;
+    overflow-y: auto;
+}
+@keyframes calPopIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* 弹窗标题 */
+.cal-modal-title {
+    font-size: 18px; font-weight: bold; margin-bottom: 20px; text-align: center;
+    color: var(--cal-text);
+}
+
+/* 2. 心情选择器样式 */
+.cal-mood-grid {
+    display: flex; justify-content: space-between; gap: 10px;
+    margin-bottom: 20px;
+}
+.cal-mood-item {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--cal-bg);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+    color: var(--cal-sub);
+}
+.cal-mood-item.selected {
+    background: rgba(142, 173, 209, 0.2);
+    border-color: var(--cal-accent);
+    color: var(--cal-accent);
+    transform: scale(1.1);
+}
+
+/* =======================================================
+   === V5.5 新增：搜索栏与 Emoji 输入 ===
+   ======================================================= */
+
+/* === 修复：搜索栏样式 === */
+.cal-search-bar {
+    margin: 0 0 15px 0;
+    position: relative;
+    width: 100%; /* 确保占满宽度 */
+}
+
+.cal-search-input {
+    width: 100%;
+    height: 38px;
+    background: rgba(0,0,0,0.05);
+    border: none;
+    border-radius: 12px;
+    /* 关键：左边留出 40px 空间，文字绝对不会碰到图标了 */
+    padding: 0 10px 0 40px !important; 
+    font-size: 14px;
+    color: var(--cal-text);
+    outline: none;
+    box-sizing: border-box;
+}
+
+.cal-search-icon {
+    position: absolute;
+    left: 12px;
+    /* 垂直居中稍微偏上一点点 */
+    top: 35% !important; 
+    transform: translateY(-50%);
+    width: 16px; height: 16px;
+    color: var(--cal-sub);
+    pointer-events: none;
+    z-index: 10;
+}
+
+.cal-search-input:focus { background: rgba(0,0,0,0.08); }
+
+/* 2. 弹窗内：图标/Emoji 切换 Tab */
+.cal-icon-type-tabs {
+    display: flex;
+    background: rgba(0,0,0,0.05);
+    border-radius: 8px;
+    padding: 2px;
+    margin-bottom: 10px;
+}
+.cal-icon-type-tab {
+    flex: 1;
+    text-align: center;
+    font-size: 12px;
+    padding: 6px 0;
+    color: var(--cal-sub);
+    border-radius: 6px;
+    cursor: pointer;
+}
+.cal-icon-type-tab.active {
+    background: var(--cal-card);
+    color: var(--cal-text);
+    font-weight: bold;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* 3. Emoji 输入框 */
+.cal-emoji-input-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 60px;
+    background: var(--cal-bg);
+    border-radius: 12px;
+    margin-top: 10px;
+}
+.cal-emoji-input {
+    width: 100%;
+    text-align: center;
+    font-size: 32px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--cal-text);
+}
+
+/* =======================================================
+   === V5.6 新增：日历模块 ===
+   ======================================================= */
+
+/* 日历容器 */
+.cal-calendar-wrapper {
+    background: var(--cal-card);
+    border-radius: 24px;
+    padding: 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.02);
+    margin-bottom: 20px;
+}
+
+/* 头部 (月份切换) */
+.cal-calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 0 10px;
+}
+.cal-month-title { font-size: 18px; font-weight: bold; color: var(--cal-text); }
+.cal-month-nav {
+    width: 32px; height: 32px;
+    border-radius: 10px;
+    background: var(--cal-bg);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: var(--cal-text);
+}
+
+/* 星期头 */
+.cal-week-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 10px;
+    text-align: center;
+}
+.cal-week-day { font-size: 12px; color: var(--cal-sub); font-weight: bold; }
+
+/* 日期网格 */
+.cal-days-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px; /* 格子间距 */
+}
+
+/* 单个日期块 */
+.cal-day-cell {
+    aspect-ratio: 1; /* 正方形 */
+    border-radius: 12px;
+    background: var(--cal-bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+}
+.cal-day-cell.empty { background: transparent; cursor: default; }
+.cal-day-cell.selected { border-color: var(--cal-text); transform: scale(0.95); }
+
+/* 日期数字 */
+.cal-day-num { font-size: 14px; font-weight: bold; color: var(--cal-text); margin-bottom: 2px; }
+/* 净热量小字 */
+.cal-day-val { font-size: 8px; font-weight: bold; transform: scale(0.9); }
+
+/* 颜色状态 (默认) */
+.cal-day-cell.status-inc { background: rgba(76, 217, 100, 0.15); color: #2e7d32; } /* 绿 */
+.cal-day-cell.status-dec { background: rgba(255, 59, 48, 0.15); color: #c62828; } /* 粉/红 */
+.cal-day-cell.status-zero { background: var(--cal-bg); color: var(--cal-sub); }
+
+/* 日历设置按钮 (右上角) */
+.cal-calendar-settings {
+    position: absolute;
+    right: 20px;
+    top: 75px; /* 根据实际布局微调 */
+    color: var(--cal-sub);
+    cursor: pointer;
+}
+
+/* === 日历详情列表 (新奇 UI：卡片流) === */
+.cal-detail-list-container {
+    padding-bottom: 100px;
+    animation: calSlideUp 0.3s ease-out;
+}
+@keyframes calSlideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+.cal-detail-header {
+    font-size: 14px; color: var(--cal-sub); 
+    margin-bottom: 15px; padding-left: 10px;
+    border-left: 3px solid var(--cal-text);
+    display: flex; justify-content: space-between;
+}
+
+/* 卡片流样式 */
+.cal-flow-card {
+    background: var(--cal-card);
+    border-radius: 16px;
+    padding: 15px;
+    margin-bottom: 15px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+/* 左侧色条装饰 */
+.cal-flow-card::before {
+    content: ''; position: absolute;
+    left: 0; top: 0; bottom: 0; width: 6px;
+}
+.cal-flow-card.type-inc::before { background: var(--cal-accent); }
+.cal-flow-card.type-dec::before { background: var(--cal-accent-dec); }
+
+.cal-flow-content { margin-left: 15px; }
+.cal-flow-name { font-size: 16px; font-weight: bold; margin-bottom: 4px; }
+.cal-flow-time { font-size: 12px; color: var(--cal-sub); font-family: monospace; }
+.cal-flow-val { 
+    font-size: 20px; font-weight: 900; 
+    background: rgba(0,0,0,0.05); 
+    padding: 5px 10px; 
+    border-radius: 10px;
+}
+
+/* 2. 新增：日历颜色选择器 UI */
+.cal-color-picker-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: var(--cal-bg);
+    border-radius: 12px;
+}
+.cal-color-circle {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    border: 2px solid rgba(0,0,0,0.1);
+    overflow: hidden;
+    cursor: pointer;
+    position: relative;
+}
+.cal-color-circle input[type="color"] {
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    padding: 0; margin: 0;
+    cursor: pointer;
+    border: none;
+    opacity: 0; /* 隐藏原生控件，只取色 */
+}
+
+/* =======================================================
+   === V5.7 新增：高级导入导出样式 ===
+   ======================================================= */
+.io-option-group {
+    background: var(--cal-bg);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+.io-option-title {
+    font-size: 13px; font-weight: bold; 
+    color: var(--cal-sub); 
+    margin-bottom: 10px; display: block;
+}
+.io-radio-label {
+    display: flex; align-items: center;
+    padding: 8px 0;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+.io-radio-label:last-child { border-bottom: none; }
+.io-radio-input {
+    margin-right: 10px;
+    accent-color: var(--cal-accent);
+    width: 18px; height: 18px;
+}
+.io-radio-text {
+    font-size: 15px; color: var(--cal-text);
+}
+.io-radio-desc {
+    font-size: 12px; color: var(--cal-sub); margin-left: auto;
+}
+
+
+
+/* === 核心修复：隐藏 HTML 中残留的旧导航栏 (消灭乱飞图标) === */
+.calorie-capsule-nav {
+    display: none !important;
+}
+
+
+/* =======================================================
+   === 睡眠模块 V11.0 (布局终极修正版) ===
+   ======================================================= */
+
+/* 1. 全屏容器 - 弹性布局核心 */
+#sleep-page {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: var(--sleep-bg);
+    z-index: 20000 !important;
+    display: none; /* JS 控制 display: flex */
+    flex-direction: column;
+    overflow: hidden; /* 禁止页面整体滚动，只让列表滚 */
+}
+
+:root {
+    /* 图三莫兰迪配色 */
+    --sleep-bg: #e3e8eb;        
+    --sleep-card: #ffffff;      
+    --sleep-card-sub: #cfd4d9;  
+    --sleep-text: #2c3e50;      
+    --sleep-text-sub: #94a3b8;  
+    --sleep-accent: #2c3e50;    
+    --sleep-line: #d1d9e0;      
+    --sleep-shadow: rgba(148, 163, 184, 0.2);
+}
+
+.dark-mode {
+    --sleep-bg: #0f0f11;
+    --sleep-card: #1c1c1e;
+    --sleep-card-sub: #2c2c2e;
+    --sleep-text: #f5f5f7;
+    --sleep-text-sub: #636366;
+    --sleep-accent: #ffffff;
+    --sleep-shadow: rgba(0,0,0,0.5);
+}
+/* 顶部导航 - 绝对定位到顶端，保留和卡片的间距 */
+/* 顶部导航 - 透明贴顶+按钮完整显示 */
+.sleep-top-nav {
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; /* 恢复居中，保证按钮垂直居中 */
+    padding: 0 20px;
+    padding-top: calc(env(safe-area-inset-top) + 20px); /* 仅适配刘海屏，不额外加高度 */
+    padding-bottom: 0; /* 取消容器底部内边距，避免占用卡片空间 */
+    height: auto; 
+    flex-shrink: 0;
+    z-index: 20005; /* 导航整体层级高于下方UI，保证按钮不被遮挡 */
+    position: absolute; /* 绝对定位贴顶，脱离文档流不占空间 */
+    top: 0;
+    left: 0;
+    right: 0;
+    background: transparent; /* 强制背景透明 */
+}
+
+/* 导航内按钮 - 单独控制间距，不影响容器 */
+.sleep-top-nav > * {
+    margin: 5px 0; /* 给按钮上下少量间距，保证完整显示 */
+    position: relative;
+    z-index: 20006; /* 按钮层级比导航容器高，双重保险 */
+}
+
+.sleep-icon-btn {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--sleep-text); border-radius: 50%;
+    cursor: pointer;
+}
+.sleep-icon-btn svg { width: 22px; height: 22px; stroke-width: 2px; }
+
+/* 堆叠卡片容器 - 上移 */
+.sleep-stack-wrapper {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    display: flex; justify-content: center;
+    flex-shrink: 0;
+    margin-top: calc(env(safe-area-inset-top) + 0px); /* 基于刘海屏高度+按钮高度预留空间，避免卡片顶到按钮 */
+    z-index: 5;
+}
+
+.sleep-card {
+    position: absolute;
+    width: 88%; height: 240px;
+    border-radius: 32px;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transform-origin: center top;
+}
+
+/* Layer 3 (底) */
+.sleep-card.layer-3 {
+    background: rgba(255,255,255,0.3);
+    top: 0; z-index: 1; transform: scale(0.85);
+}
+/* Layer 2 (中) */
+.sleep-card.layer-2 {
+    background: rgba(255,255,255,0.6);
+    top: 12px; z-index: 2; transform: scale(0.92);
+}
+/* Layer 1 (顶 - 操作层) */
+.sleep-card.layer-main {
+    background: var(--sleep-card);
+    top: 24px; z-index: 3; transform: scale(1);
+    box-shadow: 0 15px 40px var(--sleep-shadow);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+}
+.dark-mode .sleep-card.layer-3 { background: rgba(255,255,255,0.05); }
+.dark-mode .sleep-card.layer-2 { background: rgba(255,255,255,0.1); }
+
+.sleep-hint-text {
+    font-size: 12px; color: var(--sleep-text-sub); 
+    letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px;
+}
+.sleep-timer-text {
+    font-size: 60px; font-weight: 200;
+    color: var(--sleep-text);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 25px; letter-spacing: 1px;
+}
+
+.sleep-btn-group {
+    display: flex; align-items: center; justify-content: center;
+    gap: 60px; width: 100%;
+}
+.sleep-circle-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer;
+}
+.sleep-circle-icon {
+    width: 60px; height: 60px; border-radius: 50%;
+    background: var(--sleep-bg); color: var(--sleep-text);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.1s;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+.sleep-circle-icon:active { transform: scale(0.95); }
+.sleep-circle-icon.primary {
+    background: var(--sleep-text); color: var(--sleep-bg); /* 反色高亮 */
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+}
+.sleep-circle-label { font-size: 12px; color: var(--sleep-text-sub); }
+
+
+/* 4. 列表区域 (修复滑动的核心) */
+.sleep-list-scroll {
+    flex: 1; /* 关键：自动占据剩余空间 */
+    min-height: 0; /* 关键：防止Flex子元素溢出无法滚动 */
+    width: 100%;
+    overflow-y: auto; /* 允许垂直滚动 */
+    padding: 0 24px;
+    padding-bottom: 120px; /* 底部留白给 Dock */
+    margin-top: 0; 
+    z-index: 4;
+    -webkit-overflow-scrolling: touch; /* iOS丝滑滚动 */
+    /* 顶部遮罩实现柔和过渡 */
+    mask-image: linear-gradient(to bottom, transparent 0%, black 20px);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20px);
+}
+
+.sleep-list-title {
+    font-size: 12px; color: var(--sleep-text-sub);
+    margin: 10px 0 15px 0; letter-spacing: 1px; font-weight: bold; padding-left: 10px;
+}
+
+/* 列表项行布局 */
+.sleep-timeline-row {
+    position: relative;
+    padding-left: 20px; /* 正常模式左边距 */
+    margin-bottom: 0;
+    display: flex; flex-direction: column;
+    transition: padding-left 0.3s ease; /* 增加过渡动画 */
+}
+
+.sleep-timeline-line {
+    position: absolute; left: 7px; top: 22px; bottom: -22px;
+    width: 2px; border-left: 2px dashed var(--sleep-card-sub);
+    z-index: 0;
+}
+.sleep-timeline-row:last-child .sleep-timeline-line { display: none; }
+
+.sleep-timeline-dot {
+    position: absolute; left: 0; top: 22px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--sleep-bg);
+    border: 3px solid var(--sleep-card-sub);
+    z-index: 1;
+}
+/* 状态颜色 */
+.dot-good { border-color: #8bbd97; } 
+.dot-fair { border-color: #e3c092; } 
+.dot-poor { border-color: #d68c8c; } 
+
+.sleep-item-card {
+    background: var(--sleep-card);
+    border-radius: 20px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 10px var(--sleep-shadow);
+    display: flex; flex-direction: column;
+    gap: 6px;
+    position: relative;
+}
+.sleep-item-card:active { background: var(--sleep-bg); }
+
+.sleep-card-row-1 { display: flex; justify-content: space-between; align-items: baseline; }
+.sleep-item-time { font-size: 17px; font-weight: 600; color: var(--sleep-text); }
+.sleep-item-dur { font-size: 14px; color: var(--sleep-text); font-weight: 300; }
+.sleep-card-row-2 { display: flex; justify-content: space-between; align-items: center; }
+.sleep-item-date { font-size: 12px; color: var(--sleep-text-sub); }
+.sleep-quality-tag {
+    font-size: 11px; padding: 3px 10px; border-radius: 8px;
+    background: var(--sleep-bg); color: var(--sleep-text-sub);
+}
+.sleep-linked-diary {
+    margin-top: 5px; padding-top: 8px;
+    border-top: 1px dashed var(--sleep-line);
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--sleep-text); opacity: 0.8;
+}
+.sleep-linked-diary svg { width: 14px; height: 14px; color: var(--sleep-text-sub); }
+
+/* 复选框 - 定位在最左侧空白处 */
+.sleep-check-box {
+    position: absolute; 
+    left: 0; /* 贴紧容器左侧 */
+    top: 50%; 
+    transform: translateY(-50%) scale(0); /* 默认缩小隐藏 */
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid var(--sleep-text-sub);
+    background: var(--sleep-card);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* 弹跳动画 */
+    z-index: 10;
+}
+.sleep-check-box.checked { 
+    background: var(--sleep-text); 
+    border-color: var(--sleep-text); 
+}
+.sleep-check-box.checked::after {
+    content:''; width: 8px; height: 4px; 
+    border-left: 2px solid #fff; border-bottom: 2px solid #fff;
+    transform: rotate(-45deg) translateY(-2px);
+}
+
+/* 管理模式 - 内容整体右移，复选框弹出 */
+.manage-mode .sleep-timeline-row { padding-left: 50px; } /* 内容右移腾出空间 */
+.manage-mode .sleep-check-box { transform: translateY(-50%) scale(1); left: 10px; } /* 复选框出现 */
+/* 管理模式下，原本的时间轴线和点也要跟着移动 */
+.manage-mode .sleep-timeline-line { left: 40px !important; }
+.manage-mode .sleep-timeline-dot { left: 34px !important; }
+
+/* 5. 底部悬浮 Dock (修复透明度) */
+.sleep-dock-wrapper {
+    position: absolute; /* 绝对定位在容器底部 */
+    bottom: 30px; left: 0; width: 100%;
+    display: flex; justify-content: center;
+    z-index: 20002;
+    pointer-events: none; /* 穿透点击，只让 dock 响应 */
+}
+.sleep-dock {
+    pointer-events: auto;
+    /* 不透明背景 */
+    background: #ffffff; 
+    height: 60px;
+    border-radius: 30px; /* 圆角 */
+    padding: 0 25px;
+    display: flex; align-items: center; gap: 30px;
+    /* 强阴影 */
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    border: 1px solid rgba(0,0,0,0.05);
+}
+.dark-mode .sleep-dock { background: #2c2c2e; border-color: rgba(255,255,255,0.1); }
+
+.sleep-dock-item {
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--sleep-text-sub); cursor: pointer;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+/* 选中态 - 实心背景 */
+.sleep-dock-item.active { 
+    color: var(--sleep-text); 
+    background: rgba(0,0,0,0.08); /* 浅灰背景 */
+    font-weight: bold;
+}
+.dark-mode .sleep-dock-item.active { background: rgba(255,255,255,0.15); }
+.sleep-dock-item svg { width: 22px; height: 22px; stroke-width: 2px; }
+
+
+/* 6. 弹窗 */
+.sleep-modal-content { text-align: left; }
+.sleep-quality-selector { display: flex; gap: 10px; margin-bottom: 15px; }
+.sleep-quality-btn {
+    flex: 1; padding: 10px; border-radius: 10px;
+    background: var(--sleep-bg); color: var(--sleep-text-sub);
+    text-align: center; font-size: 13px; cursor: pointer;
+    border: 2px solid transparent; transition: all 0.2s;
+}
+.sleep-quality-btn.active {
+    background: var(--sleep-card); 
+    border-color: var(--sleep-text); color: var(--sleep-text);
+    font-weight: bold; box-shadow: 0 2px 8px var(--sleep-shadow);
+}
+.sleep-diary-selector-area {
+    margin-top: 15px; padding: 15px;
+    background: var(--sleep-bg); border-radius: 12px;
+}
+.sleep-diary-list { max-height: 150px; overflow-y: auto; display: none; margin-top: 10px; }
+.sleep-diary-option {
+    padding: 10px; border-radius: 8px; background: var(--sleep-card);
+    margin-bottom: 8px; cursor: pointer; display: flex; align-items: center;
+}
+.sleep-diary-option.selected { border: 1px solid var(--sleep-text); }
+.sleep-diary-option-check {
+    width: 16px; height: 16px; border: 1px solid #ccc; border-radius: 50%; margin-right: 10px;
+    display: flex; align-items: center; justify-content: center; font-size: 10px;
+}
+.sleep-diary-option.selected .sleep-diary-option-check { background: var(--sleep-text); border-color: var(--sleep-text); color: #fff; }
+.s-switch { position: relative; display: inline-block; width: 40px; height: 24px; float: right; }
+.s-switch input { opacity: 0; width: 0; height: 0; }
+.s-slider {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc; transition: .4s; border-radius: 24px;
+}
+.s-slider:before {
+    position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+    background-color: white; transition: .4s; border-radius: 50%;
+}
+input:checked + .s-slider { background-color: var(--sleep-text); }
+input:checked + .s-slider:before { transform: translateX(16px); }
+
+/* 确保自定义弹窗层级高于睡眠页面 */
+.sleep-modal-wrapper {
+    z-index: 21000 !important; /* 高于 sleep-page 的 20000 */
+}
+
+/* =========================================
+   新功能：睡眠统计模块 (V2 - 样式修正版)
+   ========================================= */
+
+/* 统计模块容器 */
+#sleep-stats-container {
+    width: 100%;
+    padding: 10px 0 0 0; /* 减少顶部留白 */
+    margin-bottom: 5px;
+    background: transparent;
+    animation: fadeIn 0.8s ease-out;
+}
+
+/* 1. 概览卡片 (今日数据) - 高度已减小 */
+.sleep-summary-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px; /* 减小内边距 */
+    margin: 5px 20px 15px 20px; /* 减小外边距 */
+    background: var(--surface-color, rgba(255, 255, 255, 0.8));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 20px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    user-select: none; /* 防止双击选中文本 */
+    transition: transform 0.1s;
+}
+
+.sleep-summary-card:active {
+    transform: scale(0.98);
+}
+
+.summary-left h3 {
+    font-size: 13px;
+    color: var(--text-secondary, #8e8e93);
+    margin: 0;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+.summary-left .sleep-hours {
+    font-size: 30px; /* 稍微调小字体适配高度 */
+    font-weight: 700;
+    color: var(--text-primary, #000);
+    margin: 2px 0;
+    letter-spacing: -1px;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+}
+
+/* 替换原有的 .chart-wrapper */
+.chart-wrapper {
+    position: relative;
+    width: 100%;
+    height: 190px; /* 稍微给足一点高度空间 */
+    margin-top: 0; /* 取消之前的上移，防止顶部被切 */
+    margin-bottom: 0;
+    overflow: visible; /* 关键！允许线条稍微画出界，不会被切掉底部 */
+    z-index: 10;
+}
+
+/* 图表头部 */
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 24px;
+    margin-bottom: 5px;
+}
+.chart-title {
+    font-size: 16px;
+    font-weight: 700;
+    /* 强制使用变量，解决黑夜模式看不清的问题 */
+    color: var(--text-primary, #000); 
+    transition: color 0.3s;
+}
+.chart-period-selector {
+    padding: 6px 12px;
+    background: rgba(128,128,128,0.15); /* 加深一点背景让白色文字更明显 */
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary, #000);
+    cursor: pointer; /* 提示可点击 */
+    transition: all 0.2s;
+}
+.chart-period-selector:active {
+    transform: scale(0.95);
+    background: rgba(128,128,128,0.3);
+}
+
+/* SVG 容器 */
+#sleep-trend-svg {
+    width: 100%;
+    height: 100%;
+    /* 解决黑夜模式下SVG阴影过重的问题 */
+    filter: drop-shadow(0 4px 6px rgba(var(--primary-rgb, 0,0,0), 0.1));
+}
+
+/* 3. 底部日期选择器 */
+.date-scroller {
+    display: flex;
+    overflow-x: auto;
+    padding: 5px 20px 10px 20px;
+    gap: 12px;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.date-scroller::-webkit-scrollbar { display: none; }
+
+.date-capsule {
+    min-width: 45px; /* 稍微变窄 */
+    height: 65px;
+    background: transparent;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: var(--text-secondary);
+}
+
+.date-capsule.active {
+    background: var(--primary-color, #007AFF);
+    color: #fff;
+    box-shadow: 0 5px 15px rgba(var(--primary-rgb, 0, 122, 255), 0.3);
+}
+
+.capsule-day { font-size: 11px; margin-bottom: 4px; }
+.capsule-date { font-size: 16px; font-weight: 600; }
+
+.goal-status { font-size: 12px; margin-top: 2px; font-weight: 500;}
+.goal-status.hit { color: #34C759; }
+.goal-status.miss { color: #FF3B30; }
+
+/* 黑夜模式强力适配 */
+body.dark-mode .sleep-summary-card {
+    background: rgba(28, 28, 30, 0.6);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+body.dark-mode .chart-title {
+    color: #ffffff; /* 强制白色 */
+}
+body.dark-mode .chart-period-selector {
+    background: rgba(255,255,255,0.15);
+    color: #ffffff;
+}
+body.dark-mode .sleep-hours {
+    color: #ffffff;
+}
+
+/* =========================================
+   模块三：筛选与小组件 (Filter & Widget)
+   ========================================= */
+
+/* 1. 筛选容器 */
+.filter-page-container {
+    padding: 10px 20px 80px 20px; /* 底部留出Dock高度 */
+    animation: fadeIn 0.6s ease;
+}
+
+/* 2. 八个分类按钮网格 (两行四列) */
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 一行四个 */
+    gap: 12px;
+    margin-bottom: 25px;
+}
+
+.filter-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 70px;
+    background: #e1e9eb; /* 图二色卡: 浅灰蓝 */
+    border-radius: 18px;
+    border: none;
+    color: #74808a; /* 图二色卡: 深灰蓝 */
+    font-size: 11px;
+    font-weight: 600;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.filter-btn-icon {
+    font-size: 20px;
+    margin-bottom: 6px;
+    color: #99a6ad;
+}
+
+/* 选中状态 */
+.filter-btn.active {
+    background: #74808a; /* 深色高亮 */
+    color: #e1e9eb;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(116, 128, 138, 0.4);
+}
+.filter-btn.active .filter-btn-icon {
+    color: #e1e9eb;
+}
+
+/* 3. 播放器风格小组件 */
+.music-widget {
+    background: linear-gradient(135deg, #99a6ad 0%, #74808a 100%);
+    border-radius: 28px;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #fff;
+    margin-bottom: 25px;
+    box-shadow: 0 15px 35px rgba(116, 128, 138, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+/* 装饰背景圆 */
+.music-widget::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -20%;
+    width: 200px;
+    height: 200px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.music-info {
+    flex: 1;
+    z-index: 2;
+    padding-right: 15px;
+}
+
+.music-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    cursor: pointer;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.music-desc {
+    font-size: 12px;
+    opacity: 0.8;
+    background: rgba(255,255,255,0.2);
+    padding: 4px 10px;
+    border-radius: 20px;
+    display: inline-block;
+    cursor: pointer;
+}
+
+/* 旋转唱片/图片区 */
+.music-cover-wrapper {
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    background: #ccd4da;
+    border: 4px solid rgba(255,255,255,0.25);
+    flex-shrink: 0;
+    position: relative;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    z-index: 2;
+}
+
+/* 简单的旋转动画 */
+.music-cover-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    animation: spin 10s linear infinite;
+}
+@keyframes spin { 100% { transform: rotate(360deg); } }
+
+/* 4. 筛选列表标题 */
+.filter-result-header {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+    padding-left: 5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* 黑夜模式适配 */
+body.dark-mode .filter-btn {
+    background: rgba(255,255,255,0.1);
+    color: #aaa;
+}
+body.dark-mode .filter-btn.active {
+    background: #fff;
+    color: #000;
+}
+body.dark-mode .filter-btn.active .filter-btn-icon {
+    color: #000;
+}
+body.dark-mode .music-widget {
+    background: linear-gradient(135deg, #2c2c2e 0%, #1c1c1e 100%);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+}
